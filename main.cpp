@@ -3,29 +3,21 @@
 #include <iostream>
 #include <math.h>
 
-// Window dimensions
-const GLint WIDTH = 1280, HEIGHT = 720;
-
 // Vertex shader source code
 const GLchar* vertexShaderSource = R"(
-
     #version 450 core
     layout (location = 0) in vec3 position;
 	layout (location = 1) in vec3 color;
-
-	out vec3 vertexColor;	
-
+	out vec3 vertexColor;
     void main()
     {
 		vertexColor = color;
         gl_Position = vec4(position.x, position.y, 0.0, 1.0);
     }
-
 )";
 
 // Fragment shader source code
 const GLchar* fragmentShaderSource = R"(
-
     #version 450 core
 	in vec3 vertexColor;
 	out vec4 fragColor;
@@ -33,7 +25,6 @@ const GLchar* fragmentShaderSource = R"(
     {
         fragColor = vec4(vertexColor, 1.0f);
     }
-
 )";
 
 const float PI = 3.14159265358979323;
@@ -44,107 +35,151 @@ GLuint VAO;
 // Shader program. A shader program is an object capable of combining shaders
 GLuint shaderProgram;
 
-GLuint screenWidth, screenHeight, windowWidth, windowHeight;
 
-GLuint niterations;
+//Object physical kinematic characteristics
+float ObjectPositionX = -1.0;
+float ObjectPositionY = -1.0;
+
+float ObjectVelocityX = 0.0;
+float ObjectVelocityY = 0.0;
+
+float ObjectAccelerationX = 0.5;
+float ObjectAccelerationY = 0.5;
+
+
+//Object characteristics
+float radius = 0.01;
+const int niterations = 20;
+float beta = 360.0f / niterations * (2 * PI / 360.0f);
+float alpha = beta;
+GLfloat vertices[6 * niterations];													
+GLfloat colors[9 * niterations];
+
+//Time characteristics
+float deltatime = 0.0;
+float frametime = 0.0;
+
 
 // Initialize OpenGL state
-void init()
-{
+void init() {
+
     // Create vertex array object (VAO)
-    glGenVertexArrays(1, &VAO);															//Generates 1 vertex array to the direction of the stored values, in this case VAO
-    glBindVertexArray(VAO);																//Is used to bind a VAO in the current state of rendering
+    glGenVertexArrays(1, &VAO);														
+    glBindVertexArray(VAO);
 
-	float radius = 1;
+    for (int i = 0; i < 6 * niterations; i++) {
+        vertices[i] = 0;
+        vertices[i + 1] = 0;
 
-	niterations = 5;
+        vertices[i + 2] = radius * cos(beta);
+        vertices[i + 3] = radius * sin(beta);
 
-	float beta = 360/niterations * (2*PI / 360);
+        vertices[i + 4] = radius * cos(beta + alpha);
+        vertices[i + 5] = radius * sin(beta + alpha);
 
-	float alpha = beta;
+        i = i + 5;
+        beta = beta + alpha;
+    };
 
-    // Triangle vertex data
-	GLfloat vertices[6*niterations];													//Six is the number of coordinates per triangle 3 X coordinates and 3 Y coordinates
-	
-	GLfloat colors[9*niterations];
+    for (int i = 0; i < 9 * niterations; i += 3) {
 
-	for (int i = 0; i < 6*niterations; i++) {
-
-		vertices[i] = 0;
-		vertices[i + 1] = 0;
-
-		vertices[i + 2] = radius*cos(beta);
-		vertices[i + 3] = radius*sin(beta);
-
-		vertices[i + 4] = radius*cos(beta + alpha);
-		vertices[i + 5] = radius*sin(beta + alpha);
-
-		i = i + 5;
-
-		beta = beta + alpha;
-
-	};
-
-	for (int i = 0; i < 9*niterations; i+=3) {
-
-		colors[i] = 1.0;
-		colors[i + 1] = 0.0;
-		colors[i + 2] = 0.0;
-		/* colors[i + 3] = 1.0; */
-		/* colors[i + 4] = 0.0; */
-		/* colors[i + 5] = 0.0; */
-
-		/* i = i + 5; */
-
+        colors[i] = 1.0;
+        colors[i + 1] = 0.0;
+        colors[i + 2] = 0.0;
+    
 	}
-	
-	/* GLfloat colors[] = { */
-	
-	/* 	0.0f, 0.0f, 1.0f, */
-	/* 	0.0f, 0.0f, 1.0f, */
 
-	/* }; */
+    // Create vertex buffer object (VBO) for vertices
+    GLuint vertexVBO;															
+    glGenBuffers(1, &vertexVBO);													
+    glBindBuffer(GL_ARRAY_BUFFER, vertexVBO);										
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    // Create vertex buffer object (VBO)
-    GLuint VBO;																			//VBO stores vertex data such as (coordinates, color, texture...)
-    glGenBuffers(1, &VBO);																//Generates 1 buffer pointing to the direction of the stored values, in this case VBO
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);													//Bind a buffer to an specific binding point
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);			//Used to transfer data to the buffer
+    // Specify vertex attribute pointers for vertices
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), (GLvoid*)0);
+    glEnableVertexAttribArray(0);
 
-	// Specify vertex attribute pointers
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), (GLvoid*)0);	//Specify the layout and format of vertex data stored in VBO
-    glEnableVertexAttribArray(0);														//Enable attributes for use during rendering
+    // Create vertex buffer object (VBO) for colors
+    GLuint colorVBO;
+    glGenBuffers(1, &colorVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, colorVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(colors), colors, GL_STATIC_DRAW);
 
-	GLuint colorVBO;
-	glGenBuffers(1, &colorVBO);
-	glBindBuffer(GL_ARRAY_BUFFER, colorVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(colors), colors, GL_STATIC_DRAW);
+    // Specify vertex attribute pointers for colors
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
+    glEnableVertexAttribArray(1);
 
-   	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3*sizeof(GLfloat), (GLvoid*)0);
-	glEnableVertexAttribArray(1);
-	
     // Unbind VAO and VBO
-    glBindBuffer(GL_ARRAY_BUFFER, 0);													//Unbinds a buffer object from the current binding point
-    glBindVertexArray(0);																//Unbinds a vertex array object from the current binding point
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
 }
 
 // Render the scene
-void display()
-{
-    // Clear the color buffer
-	glViewport(0, 0, WIDTH, HEIGHT);
-    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);												
-    glClear(GL_COLOR_BUFFER_BIT);														//Clear the screen
-	glBindVertexArray(VAO);
+void display() {
 
+    // Clear the color buffer
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    glBindVertexArray(VAO);
 
     // Use the shader program
-    glUseProgram(shaderProgram);														//Activates the program for use
-    glBindVertexArray(VAO);																//Binds a VAO to the current state of rendering
-    glDrawArrays(GL_TRIANGLES, 0, 3 * niterations);													//Draw the array of data	
+    glUseProgram(shaderProgram);
+
+	//Update the vertex buffer data
+	GLuint vertexVBO;
+	glGenBuffers(1, &vertexVBO);
+	glBindBuffer(GL_ARRAY_BUFFER, vertexVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+	//Specify vertex attribute pointers for vertices
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), (GLvoid*)0);
+	glEnableVertexAttribArray(0);
+
+	glBindVertexArray(VAO);
+    glDrawArrays(GL_TRIANGLES, 0, 3 * niterations);
+
+    glBindVertexArray(0);
+}
+
+// GLFW framebuffer size callback function
+void framebufferSizeCallback(GLFWwindow* window, int width, int height) {
+    // Update viewport dimensions
+    glViewport(0, 0, width, height);
+}
+
+void updateobjectposition() {
+
+	//Update time
+	GLfloat totalTime = glfwGetTime();
+	deltatime = totalTime - frametime;
+	frametime = totalTime;
+
+	//Update position
+	ObjectPositionX = (ObjectPositionX) + (ObjectVelocityX * deltatime) + ((ObjectAccelerationX * deltatime * deltatime)/2);
+	ObjectPositionY = (ObjectPositionY) + (ObjectVelocityY * deltatime) + ((ObjectAccelerationY * deltatime * deltatime)/2);
+
+	//Update velocity
+	ObjectVelocityX = (ObjectVelocityX) + (ObjectAccelerationX * deltatime);
+	ObjectVelocityY = (ObjectVelocityY) + (ObjectAccelerationY * deltatime);
+
+	for(int i = 0; i < 6*niterations; i++) {
+
+		vertices[i] = 0 + ObjectPositionX;
+        vertices[i + 1] = 0 + ObjectPositionY;
+
+        vertices[i + 2] = radius * cos(beta) + ObjectPositionX;
+        vertices[i + 3] = radius * sin(beta) + ObjectPositionY;
+
+        vertices[i + 4] = radius * cos(beta + alpha) + ObjectPositionX;
+        vertices[i + 5] = radius * sin(beta + alpha) + ObjectPositionY;
+
+        i = i + 5;
+
+        beta = beta + alpha;
 	
-    glBindVertexArray(0);																//Unbind the vertex array object from the current binding point
+	}
+	
 }
 
 int main()
@@ -157,14 +192,14 @@ int main()
     }
 
     // Set GLFW options
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);										
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
     // Create a GLFW window
-    GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Simple Triangle", nullptr, nullptr);		//Creates a GLFW window
-    if (!window)																					//Checks for error in window initialization
+    GLFWwindow* window = glfwCreateWindow(1280, 720, "Dynamic Window", nullptr, nullptr);
+    if (!window)
     {
         std::cout << "GLFW window creation failed!" << std::endl;
         glfwTerminate();
@@ -172,10 +207,10 @@ int main()
     }
 
     // Make the created window the current context
-    glfwMakeContextCurrent(window);														//OpenGL commands are directed towars a Current
+    glfwMakeContextCurrent(window);
 
     // Initialize GLEW
-    glewExperimental = GL_TRUE;															
+    glewExperimental = GL_TRUE;
     if (glewInit() != GLEW_OK)
     {
         std::cout << "GLEW initialization failed!" << std::endl;
@@ -184,43 +219,39 @@ int main()
         return -1;
     }
 
-    // Set viewport dimensions
-    glViewport(0, 0, WIDTH, HEIGHT);													//To match the framebuffer dimensions
+    // Set GLFW callback functions
+    glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 
     // Create and compile vertex shader
-    GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);								//Creates a shader of the specified type, in this case: is 'vertex shader'
-    glShaderSource(vertexShader, 1, &vertexShaderSource, nullptr);						//Specifies the shader source code to be compiled
-    glCompileShader(vertexShader);														//Compiles the shader(vertex shader) code
+    GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertexShader, 1, &vertexShaderSource, nullptr);
+    glCompileShader(vertexShader);
 
     // Create and compile fragment shader
-    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);							//Creates a shader of the specified type, in this case: is 'fragment shader'
-    glShaderSource(fragmentShader, 1, &fragmentShaderSource, nullptr);					//Specifies the shader source code to be compiled
-    glCompileShader(fragmentShader);													//Compiles the shader(fragment shader) code
+    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragmentShader, 1, &fragmentShaderSource, nullptr);
+    glCompileShader(fragmentShader);
 
     // Create shader program and link shaders
-    shaderProgram = glCreateProgram();													//Creates a shader program objects, capable of combining shader
-    glAttachShader(shaderProgram, vertexShader);										//Attachs the vertex shader into the program
-    glAttachShader(shaderProgram, fragmentShader);										//Attachs the fragment shader into the program
-    glLinkProgram(shaderProgram);														//Makes sure that every links between attachments are correct
+    shaderProgram = glCreateProgram();
+    glAttachShader(shaderProgram, vertexShader);
+    glAttachShader(shaderProgram, fragmentShader);
+    glLinkProgram(shaderProgram);
 
     // Clean up shader objects
-    glDeleteShader(vertexShader);														//Delete vortex shader as it is already into the program and is no longer needed
-    glDeleteShader(fragmentShader);														//Delete fragment shader as it is already into the program and is no longer needed
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
 
     // Call initialization function
     init();
 
     // Main loop
-    while (!glfwWindowShouldClose(window))												//Determinates if the window shloud be closed or not
+    while (!glfwWindowShouldClose(window))
     {
-        // Poll events
-        glfwPollEvents();																//Checks for incoming messages from the operative system
-
-        // Call display function
-        display();																		//Calls display function
-
-        // Swap the buffers
-        glfwSwapBuffers(window);														//Redraws the contents to the user
+        glfwPollEvents();
+		updateobjectposition();
+        display();
+        glfwSwapBuffers(window);
     }
 
     // Clean up resources
@@ -228,7 +259,7 @@ int main()
     glDeleteProgram(shaderProgram);
 
     // Terminate GLFW
-    glfwTerminate();																	//Shut down
+    glfwTerminate();
 
     return 0;
 }
