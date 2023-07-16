@@ -5,30 +5,52 @@
 
 const float PI = 3.14159265358979323;
 
-GLuint VAO;
+GLuint VAO1, VAO2;
 
 GLuint shaderProgram;
 
-float radius = 0.01;
-const int iterations = 20;
-float beta = 360.0f / iterations * (2 * PI / 360.0f);
-float alpha = beta;
-GLfloat vertices[6 * iterations];													
-GLfloat colors[9 * iterations];
+float radius1 = 0.01;
+const int iterations1 = 20;
+float beta1 = 360.0f / iterations1 * (2 * PI / 360.0f);
+float alpha1 = beta1;
+GLfloat vertices1[6 * iterations1];													
+GLfloat colors1[9 * iterations1];
 
-float deltatime = 0.0;
-float frametime = 0.0;
+float deltatime1 = 0.0;
+float frametime1 = 0.0;
 
-float ObjectPositionX = -1.0;
-float ObjectPositionY = -1.0;
-float ObjectPositionZ = 0.0;
+float ObjectPositionX1 = -1.0;
+float ObjectPositionY1 = -1.0;
+float ObjectPositionZ1 = 0.0;
 
-float ObjectVelocityX = 0.0;
-float ObjectVelocityY = 0.0;
-float ObjectVelocityZ = 0.0;
+float ObjectVelocityX1 = 0.0;
+float ObjectVelocityY1 = 0.0;
+float ObjectVelocityZ1 = 0.0;
 
-float ObjectAccelerationX = 0.5;
-float ObjectAccelerationY = 0.5;
+float ObjectAccelerationX1 = 0.5;
+float ObjectAccelerationY1 = 0.5;
+
+
+float radius2 = 0.01;
+const int iterations2 = 20;
+float beta2 = 360.0f / iterations2 * (2 * PI / 360.0f);
+float alpha2 = beta2;
+GLfloat vertices2[6 * iterations2];													
+GLfloat colors2[9 * iterations2];
+
+float deltatime2 = 0.0;
+float frametime2 = 0.0;
+
+float ObjectPositionX2 = 1.0;
+float ObjectPositionY2 = 1.0;
+float ObjectPositionZ2 = 0.0;
+
+float ObjectVelocityX2 = 0.0;
+float ObjectVelocityY2 = 0.0;
+float ObjectVelocityZ2 = 0.0;
+
+float ObjectAccelerationX2 = -0.5;
+float ObjectAccelerationY2 = -0.5;
 
 const GLchar* vertexShaderSource = R"(
 
@@ -70,9 +92,13 @@ void display();
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 
-void rendersphere(float radius1, int iterations);
+void rendersphere1(float radius1, int iterations1);
 
-void updateobjectposition();
+void rendersphere2(float radius2, int iterations2);
+
+void updateobjectposition1();
+
+void updateobjectposition2();
 
 
 int main() {
@@ -135,13 +161,15 @@ int main() {
     while (!glfwWindowShouldClose(window)) {
 
         glfwPollEvents();
-		updateobjectposition();
+		updateobjectposition1();
+		updateobjectposition2();
         display();
         glfwSwapBuffers(window);
     
 	}
 
-    glDeleteVertexArrays(1, &VAO);
+    glDeleteVertexArrays(1, &VAO1);
+	glDeleteVertexArrays(1, &VAO2);
     glDeleteProgram(shaderProgram);
 
     glfwTerminate();
@@ -151,7 +179,8 @@ int main() {
 
 void init() {
 
-	rendersphere(radius, iterations);
+	rendersphere1(radius1, iterations1);
+	rendersphere2(radius2, iterations2);
 
    }
 
@@ -160,23 +189,36 @@ void display() {
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    glBindVertexArray(VAO);
+    glBindVertexArray(VAO1);
 
     glUseProgram(shaderProgram);
 
-	GLuint vertexVBO;
-	glGenBuffers(1, &vertexVBO);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
+	GLuint vertexVBO1;
+	glGenBuffers(1, &vertexVBO1);
+	glBindBuffer(GL_ARRAY_BUFFER, vertexVBO1);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices1), vertices1, GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), (GLvoid*)0);
 	glEnableVertexAttribArray(0);
 
-	glBindVertexArray(VAO);
-    glDrawArrays(GL_TRIANGLES, 0, 3 * iterations);
-	glDrawArrays(GL_TRIANGLES, 0, 3 * iterations);
+	glBindVertexArray(VAO1);
 
-    glBindVertexArray(0);
+    glDrawArrays(GL_TRIANGLES, 0, 3 * iterations1);
+
+
+	glBindVertexArray(VAO2);
+
+	GLuint vertexVBO2;
+	glGenBuffers(1, &vertexVBO2);
+	glBindBuffer(GL_ARRAY_BUFFER, vertexVBO2);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices2), vertices2, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), (GLvoid*)0);
+	glEnableVertexAttribArray(0);
+
+	glBindVertexArray(VAO2);
+
+	glDrawArrays(GL_TRIANGLES, 0, 3 * iterations2);
+
+	glBindVertexArray(0);
 
 }
 
@@ -186,48 +228,46 @@ void framebufferSizeCallback(GLFWwindow* window, int width, int height) {
 
 }
 
-void rendersphere(float radius, int iterations) {
+void rendersphere1(float radius1, int iterations1) {
 
-	glGenVertexArrays(1, &VAO);														
-    glBindVertexArray(VAO);
+	glGenVertexArrays(1, &VAO1);														
+    glBindVertexArray(VAO1);
 
-    for (int i = 0; i < 6 * iterations; i++) {
+    for (int i = 0; i < 6 * iterations1; i++) {
         
-		vertices[i] = 0;
-        vertices[i + 1] = 0;
+		vertices1[i] = 0;
+        vertices1[i + 1] = 0;
 
-        vertices[i + 2] = radius * cos(beta);
-        vertices[i + 3] = radius * sin(beta);
+        vertices1[i + 2] = radius1 * cos(beta1);
+        vertices1[i + 3] = radius1 * sin(beta1);
 
-        vertices[i + 4] = radius * cos(beta + alpha);
-        vertices[i + 5] = radius * sin(beta + alpha);
+        vertices1[i + 4] = radius1 * cos(beta1 + alpha1);
+        vertices1[i + 5] = radius1 * sin(beta1 + alpha1);
 
         i = i + 5;
-        beta = beta + alpha;
+        beta1 = beta1 + alpha1;
     
 	};
 
-    for (int i = 0; i < 9 * iterations; i += 3) {
+    for (int i = 0; i < 9 * iterations1; i += 3) {
 
-        colors[i] = 1.0;
-        colors[i + 1] = 0.0;
-        colors[i + 2] = 0.0;
+        colors1[i] = 1.0;
+        colors1[i + 1] = 0.0;
+        colors1[i + 2] = 0.0;
     
 	}
 
-    GLuint vertexVBO;															
-    glGenBuffers(1, &vertexVBO);													
-    glBindBuffer(GL_ARRAY_BUFFER, vertexVBO);										
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
+    GLuint vertexVBO1;															
+    glGenBuffers(1, &vertexVBO1);													
+    glBindBuffer(GL_ARRAY_BUFFER, vertexVBO1);										
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices1), vertices1, GL_STATIC_DRAW);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), (GLvoid*)0);
     glEnableVertexAttribArray(0);
 
-    GLuint colorVBO;
-    glGenBuffers(1, &colorVBO);
-    glBindBuffer(GL_ARRAY_BUFFER, colorVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(colors), colors, GL_STATIC_DRAW);
-
+    GLuint colorVBO1;
+    glGenBuffers(1, &colorVBO1);
+    glBindBuffer(GL_ARRAY_BUFFER, colorVBO1);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(colors1), colors1, GL_STATIC_DRAW);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
     glEnableVertexAttribArray(1);
 
@@ -236,32 +276,111 @@ void rendersphere(float radius, int iterations) {
  
 }
 
-void updateobjectposition() {
+void rendersphere2(float radius2, int iterations2) {
 
-	GLfloat totalTime = glfwGetTime();
-	deltatime = totalTime - frametime;
-	frametime = totalTime;
+	glGenVertexArrays(1, &VAO2);														
+    glBindVertexArray(VAO2);
 
-	ObjectPositionX = (ObjectPositionX) + (ObjectVelocityX * deltatime) + ((ObjectAccelerationX * deltatime * deltatime)/2);
-	ObjectPositionY = (ObjectPositionY) + (ObjectVelocityY * deltatime) + ((ObjectAccelerationY * deltatime * deltatime)/2);
+    for (int i = 0; i < 6 * iterations2; i++) {
+        
+		vertices2[i] = 0;
+        vertices2[i + 1] = 0;
 
-	ObjectVelocityX = (ObjectVelocityX) + (ObjectAccelerationX * deltatime);
-	ObjectVelocityY = (ObjectVelocityY) + (ObjectAccelerationY * deltatime);
+        vertices2[i + 2] = radius2 * cos(beta2);
+        vertices2[i + 3] = radius2 * sin(beta2);
 
-	for(int i = 0; i < 6*iterations; i++) {
+        vertices2[i + 4] = radius2 * cos(beta2 + alpha2);
+        vertices2[i + 5] = radius2 * sin(beta2 + alpha2);
 
-		vertices[i] = 0 + ObjectPositionX;
-        vertices[i + 1] = 0 + ObjectPositionY;
+        i = i + 5;
+        beta2 = beta2 + alpha2;
+    
+	};
 
-        vertices[i + 2] = radius * cos(beta) + ObjectPositionX;
-        vertices[i + 3] = radius * sin(beta) + ObjectPositionY;
+    for (int i = 0; i < 9 * iterations2; i += 3) {
 
-        vertices[i + 4] = radius * cos(beta + alpha) + ObjectPositionX;
-        vertices[i + 5] = radius * sin(beta + alpha) + ObjectPositionY;
+        colors2[i] = 1.0;
+        colors2[i + 1] = 0.0;
+        colors2[i + 2] = 0.0;
+    
+	}
+
+    GLuint vertexVBO2;															
+    glGenBuffers(1, &vertexVBO2);													
+    glBindBuffer(GL_ARRAY_BUFFER, vertexVBO2);										
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices2), vertices2, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), (GLvoid*)0);
+    glEnableVertexAttribArray(0);
+
+    GLuint colorVBO2;
+    glGenBuffers(1, &colorVBO2);
+    glBindBuffer(GL_ARRAY_BUFFER, colorVBO2);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(colors2), colors2, GL_STATIC_DRAW);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
+    glEnableVertexAttribArray(1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+ 
+}
+
+void updateobjectposition1() {
+
+	GLfloat totalTime1 = glfwGetTime();
+	deltatime1 = totalTime1 - frametime1;
+	frametime1 = totalTime1;
+
+	ObjectPositionX1 = (ObjectPositionX1) + (ObjectVelocityX1 * deltatime1) + ((ObjectAccelerationX1 * deltatime1 * deltatime1)/2);
+	ObjectPositionY1 = (ObjectPositionY1) + (ObjectVelocityY1 * deltatime1) + ((ObjectAccelerationY1 * deltatime1 * deltatime1)/2);
+
+	ObjectVelocityX1 = (ObjectVelocityX1) + (ObjectAccelerationX1 * deltatime1);
+	ObjectVelocityY1 = (ObjectVelocityY1) + (ObjectAccelerationY1 * deltatime1);
+
+	for(int i = 0; i < 6*iterations1; i++) {
+
+		vertices1[i] = 0 + ObjectPositionX1;
+        vertices1[i + 1] = 0 + ObjectPositionY1;
+
+        vertices1[i + 2] = radius1 * cos(beta1) + ObjectPositionX1;
+        vertices1[i + 3] = radius1 * sin(beta1) + ObjectPositionY1;
+
+        vertices1[i + 4] = radius1 * cos(beta1 + alpha1) + ObjectPositionX1;
+        vertices1[i + 5] = radius1 * sin(beta1 + alpha1) + ObjectPositionY1;
 
         i = i + 5;
 
-        beta = beta + alpha;
+        beta1 = beta1 + alpha1;
+	
+	}
+	
+}
+
+void updateobjectposition2() {
+
+	GLfloat totalTime2 = glfwGetTime();
+	deltatime2 = totalTime2 - frametime2;
+	frametime2 = totalTime2;
+
+	ObjectPositionX2 = (ObjectPositionX2) + (ObjectVelocityX2 * deltatime2) + ((ObjectAccelerationX2 * deltatime2 * deltatime2)/2);
+	ObjectPositionY2 = (ObjectPositionY2) + (ObjectVelocityY2 * deltatime2) + ((ObjectAccelerationY2 * deltatime2 * deltatime2)/2);
+
+	ObjectVelocityX2 = (ObjectVelocityX2) + (ObjectAccelerationX2 * deltatime2);
+	ObjectVelocityY2 = (ObjectVelocityY2) + (ObjectAccelerationY2 * deltatime2);
+
+	for(int i = 0; i < 6*iterations2; i++) {
+
+		vertices2[i] = 0 + ObjectPositionX2;
+        vertices2[i + 1] = 0 + ObjectPositionY2;
+
+        vertices2[i + 2] = radius2 * cos(beta2) + ObjectPositionX2;
+        vertices2[i + 3] = radius2 * sin(beta2) + ObjectPositionY2;
+
+        vertices2[i + 4] = radius2 * cos(beta2 + alpha2) + ObjectPositionX2;
+        vertices2[i + 5] = radius2 * sin(beta2 + alpha2) + ObjectPositionY2;
+
+        i = i + 5;
+
+        beta2 = beta2 + alpha2;
 	
 	}
 	
